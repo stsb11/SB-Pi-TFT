@@ -21,7 +21,7 @@ import psutil
 import math
 
 # OpenWeatherMap API key...
-weatherKey="PUT YOURS HERE. IT'S FREE TO SIGN UP"
+weatherKey='SIGN UP FOR FREE'
 owm = pyowm.OWM(weatherKey)
 
 #########
@@ -67,9 +67,22 @@ def renderNews(nextHeadline):
     whichHeadline = 0
 
   try:
-    drawText(headline[0:33], 20, 5, 100)
-    if len(headline) > 33:
-      drawText(headline[33:], 20, 5, 125)
+    if len(headline) > 28:
+      # Track down a space before starting a new line.
+      spaceLoc = 28
+      gotOne = False
+
+      while gotOne == False and spaceLoc < len(headline):
+        if headline[spaceLoc] == ' ':
+          gotOne = True
+          
+        spaceLoc += 1
+
+      drawText(headline[0:spaceLoc], 20, 5, 125)
+      drawText(headline[spaceLoc:], 20, 5, 150)
+    else:
+      drawText(headline, 20, 5, 162)
+      
     return whichHeadline
   except:
     print "News error:", sys.exc_info()[0]
@@ -97,14 +110,14 @@ def renderWeather():
 
     # Show the weather icon
     icon = w.get_weather_icon_name()
-    renderWeatherIcon(icon, -20, -20)
-    drawText(weather, 27, 70, 13)
+    renderWeatherIcon(icon, -15, -20)
+    drawText(weather, 25, 72, 13)
     drawText("Temp: " + str(int(currTemp['temp'])) + "C, " + "Wind: " + str(windspeed) + "m/s, Cloud: " + str(cloud) + "%",17, 5, 55)
     drawText("Sunrise: " + sunrise + ", Sunset: " + sunset, 17, 5, 75)
   except:
     # Weather trouble...
-    print "Unexpected error:", sys.exc_info()[0]
-    print "Unexpected error:", sys.exc_info()[1]
+    print "Weather error:", sys.exc_info()[0]
+    print "Weather error:", sys.exc_info()[1]
     drawText("Weather unavailable",20, 5, 5)
     pygame.display.update()
     time.sleep(2)    
@@ -271,7 +284,7 @@ def stats():
     '''
     
     # drawText(str, size, x, y)
-    drawText("System Stats", 25, 5, 5)
+    drawText("System Statistics", 25, 5, 5)
     drawText(str(liveLoad) + "%", 15, 6, 55)
     pygame.draw.rect(lcd, barColour, (5, 170 - barHeight, 25, barHeight))
     pygame.draw.rect(lcd, black, (5, 70, 25, 100), 2)
@@ -313,15 +326,17 @@ def stats():
     # Service status...
     pCon, pSer = checkRun()
 
+    drawText("PlexConnect:", 17, 130, 80, black)
     if pCon == True:
-      drawText("PlexConnect: Running", 17, 130, 80, green)
+      drawText("Running", 17, 230, 80, green)
     else:
-      drawText("PlexConnect: Stopped", 17, 130, 80, red)
+      drawText("Stopped", 17, 230, 80, red)
 
+    drawText("Plex Server:", 17, 130, 100, black)
     if pSer == True:
-      drawText("Plex Server: Running", 17, 130, 100, green)
+      drawText("Running", 17, 230, 100, green)
     else:
-      drawText("Plex Server: Stopped", 17, 130, 100, red)
+      drawText("Stopped", 17, 230, 100, red)
 
     drawText("Free HDD: " + str(hdd_used), 17, 130, 120)
     
@@ -358,7 +373,7 @@ def graph():
     f.close()
 
     howThick = 3
-    drawText("CPU Temperature", 25, 65, 15)
+    drawText("CPU Temperature", 25, 65, 5)
     pygame.draw.line(lcd, black, (25, 25), (25, 200), howThick)
     pygame.draw.line(lcd, black, (25, 25), (10, 40), howThick)
     pygame.draw.line(lcd, black, (25, 25), (40, 40), howThick)
@@ -382,7 +397,7 @@ def graph():
     # There are 175 pixels of Y axis, and a range of 60C (30C-90C)
     # Each degree is 2.91 pixels.
     perPixel = 2.91
-    currX = 26
+    currX = 28
     lastY = 200 - ((values[0] - 30) * perPixel)
 
     for nextVal in values:
@@ -402,7 +417,7 @@ def graph():
     theTime = str(datetime.datetime.now().time())
     theDate = time.strftime("%d/%m/%Y")
     drawText(theTime[0:8] + ", " + theDate,32,5,205)        
-    drawText("CPU: " + str(lastVal) + "C", 14, 200, 50)
+    drawText("CPU: " + str(lastVal) + "C", 14, 210, 30)
     pygame.display.update()
 
 ########
@@ -420,15 +435,12 @@ def main():
   lcd.fill(white)
   
   while True:
-    for n in range(10):
+    for n in range(5):
       stats()
       time.sleep(0.5)
       lcd.fill(white)
-
-    # Append the CPU log file
-    updateCPUTempLog()
     
-    for n in range(10):
+    for n in range(5):
       graph()
       time.sleep(0.5)
       lcd.fill(white)
