@@ -1,0 +1,30 @@
+Wiring it up (from https://aaron-brown.net/blog/?p=99)
+
+TFT    	  Pi		Pin no.
+BL_LED 	  GPIO_18	12
+SCK    	  SCLK		23
+MISO   	  MISO		21
+MOSI   	  MOSI		19
+CS     	  CE0		24
+RST    	  GPIO_25	22
+D/C    	  GPIO_24	18
+Vin    	  3.3V 		17
+GND    	  GND		20
+
+Pi 3 will not work with the Aaron-Brown setup guide, and will trash the /boot DIR. Use the method here.
+
+Hardware Driver (from https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/easy-install)
+
+curl -SLs https://apt.adafruit.com/add-pin | sudo bash
+sudo apt-get install raspberrypi-bootloader adafruit-pitft-helper raspberrypi-kernel
+sudo adafruit-pitft-helper -t 22
+(22 for for 2.2" non-touch screen)
+
+Use sudo raspi-config to set to boot to CLI/GUI as desired, then reboot.
+
+PyGame authoring:
+-----------------
+https://web.archive.org/web/20151027165018/http://jeremyblythe.blogspot.com/2014/09/raspberry-pi-pygame-ui-basics.html
+
+His GH repo for tutorials is here:
+https://github.com/jerbly/tutorials.git
