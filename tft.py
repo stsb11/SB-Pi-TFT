@@ -21,7 +21,7 @@ import psutil
 import math
 
 # OpenWeatherMap API key...
-weatherKey='SIGN UP FOR FREE'
+weatherKey='SIGN UP FOR A FREE KEY'
 owm = pyowm.OWM(weatherKey)
 
 #########
@@ -37,6 +37,7 @@ black = (40, 40, 40)
 red = (200, 0, 0)
 yellow = (200, 200, 0)
 green = (0, 200, 0)
+grey = (175, 175, 175)
 
 ########
 ##  General-purpose functions.
@@ -58,93 +59,149 @@ def drawText(msgText, fontSize, xLoc, yLoc, colour=black):
 ##  Functions for the news/weather page
 ########
 
-def renderNews(nextHeadline):
-  # Display top 5 headlines from BBC RSS feed.
+def renderNews():
+  # Display top 3 headlines from BBC RSS feed.
   d = feedparser.parse('http://feeds.bbci.co.uk/news/rss.xml?edition=uk')
-  headline= d['entries'][nextHeadline]['title'] + "."
-  whichHeadline = nextHeadline + 1
-  if whichHeadline > 4:
-    whichHeadline = 0
 
-  try:
-    if len(headline) > 28:
-      # Track down a space before starting a new line.
-      spaceLoc = 28
-      gotOne = False
+  # Show BBC logo.
+  image = pygame.image.load('bbc.png')
+  image = pygame.transform.scale(image, [102,57]) # Original is 1024 x 576
+  lcd.blit(image, (100, 5))
 
-      while gotOne == False and spaceLoc < len(headline):
-        if headline[spaceLoc] == ' ':
-          gotOne = True
-          
-        spaceLoc += 1
+  yPos = 65 # y location of the first headline. 25
 
-      drawText(headline[0:spaceLoc], 20, 5, 125)
-      drawText(headline[spaceLoc:], 20, 5, 150)
-    else:
-      drawText(headline, 20, 5, 162)
+  for nextHeadline in range (3):
+    headline= d['entries'][nextHeadline]['title'] + "."
+    
+    try:
+      if len(headline) > 26:
+        # Track down a space before starting a new line.
+        spaceLoc = 26
+        gotOne = False
+
+        while gotOne == False and spaceLoc < len(headline):
+          if headline[spaceLoc] == ' ':
+            gotOne = True
+
+          spaceLoc += 1
+
+        drawText(headline[0:spaceLoc], 20, 5, yPos)
+        drawText(headline[spaceLoc:], 20, 5, yPos + 25)
+      else:
+        drawText(headline, 20, 5, yPos + 12)
+
+      yPos += 60
       
-    return whichHeadline
-  except:
-    print "News error:", sys.exc_info()[0]
-    print "News error:", sys.exc_info()[1]
+      pygame.display.update()
+    except:
+      print "News error:", sys.exc_info()[0]
+      print "News error:", sys.exc_info()[1]
 
 def renderWeather():
   # Renders the weather onto the display
-  try:
-    observation = owm.weather_at_place('Market Deeping,uk')
-    w = observation.get_weather()
-      
-    weather = w.get_detailed_status()
-    weather = weather[0].upper() + weather[1:]
-    currTemp = w.get_temperature(unit='celsius')
-    humid = w.get_humidity()
-    wind = w.get_wind() 
-    windspeed = int(wind['speed'])
-    sunrise = w.get_sunrise_time('iso')
-    sunrise = right(sunrise,11)
-    sunrise = left(sunrise,8)
-    sunset = w.get_sunset_time('iso')
-    sunset = right(sunset,11)
-    sunset = left(sunset,8)
-    cloud = w.get_clouds()
+  observation = owm.weather_at_place('Market Deeping,uk')
+  w = observation.get_weather()
 
-    # Show the weather icon
-    icon = w.get_weather_icon_name()
-    renderWeatherIcon(icon, -15, -20)
-    drawText(weather, 25, 72, 13)
-    drawText("Temp: " + str(int(currTemp['temp'])) + "C, " + "Wind: " + str(windspeed) + "m/s, Cloud: " + str(cloud) + "%",17, 5, 55)
-    drawText("Sunrise: " + sunrise + ", Sunset: " + sunset, 17, 5, 75)
+  weather = w.get_detailed_status()
+  weather = weather[0].upper() + weather[1:]
+  currTemp = w.get_temperature(unit='celsius')
+  humid = w.get_humidity()
+  wind = w.get_wind() 
+  windspeed = int(wind['speed'])
+  sunrise = w.get_sunrise_time('iso')
+  sunrise = right(sunrise,11)
+  sunrise = left(sunrise,8)
+  sunset = w.get_sunset_time('iso')
+  sunset = right(sunset,11)
+  sunset = left(sunset,8)
+  cloud = w.get_clouds()
+
+  # Show the weather icon
+  pygame.draw.rect(lcd, grey, (0, 0, 320, 93))
+  icon = w.get_weather_icon_name()
+  renderWeatherIcon(icon, -15, -20)
+  drawText(weather, 25, 72, 13)
+  drawText("Temp: " + str(int(currTemp['temp'])) + "C, " + "Wind: " + str(windspeed) + "m/s, Cloud: " + str(cloud) + "%",17, 5, 53)
+  drawText("Sunrise: " + sunrise + ", Sunset: " + sunset, 17, 5, 73)
+
+  try:
+    # Do the 3-hourly forecast...
+    hourlyFc = owm.three_hours_forecast('Market Deeping,uk')
+    f = hourlyFc.get_forecast()
+    lst = f.get_weathers()
+
+    pygame.draw.rect(lcd, grey, (0, 95, 320, 73))
+    x=15
+    for weather in lst:
+      if x < 300:
+        icon = weather.get_weather_icon_name()
+        theTemp = int(weather.get_temperature(unit='celsius')['temp'])
+        forecastTime = weather.get_reference_time('iso')
+        forecasthour = int(forecastTime[11:13])
+        if forecasthour<12:
+          suffix = "am"
+        elif forecasthour == 0:
+          forecasthour = 12
+          suffix = "am"
+        else:
+          forecasthour -= 12
+          suffix = "pm"
+        renderWeatherIcon(icon, x, 100, 40, 40)
+        drawText(str(forecasthour) + suffix, 15, x+3, 95)
+        drawText(str(theTemp) + "C", 15, x + 22 - len(str(theTemp) + "C") * 5, 145)
+        drawText(weather.get_status(), 10, x + 20 - len(weather.get_status()) * 3, 133)
+        
+        x += 50
+        
+    # Do the 6-day forecast...
+    dailyFc = owm.daily_forecast('Market Deeping,uk', limit=6)
+    f = dailyFc.get_forecast()
+    lst = f.get_weathers()
+    pygame.draw.rect(lcd, grey, (0, 170, 320, 85))
+    x=15
+    for weather in lst:
+      if x < 300:
+        icon = weather.get_weather_icon_name()
+        theTemp = int(weather.get_temperature(unit='celsius')[u'day'])
+        forecastTime = weather.get_reference_time('iso')
+        forecastday = str(forecastTime[8:10])
+
+        if forecastday.endswith('1'):
+          suffix = "st"
+        elif forecastday.endswith('2'):
+          suffix = "nd"
+        elif forecastday.endswith('3'):
+          suffix = "rd"
+        else:
+          suffix = "th"
+
+        renderWeatherIcon(icon, x, 177, 40, 40)
+        drawText(str(forecastday) + suffix, 15, x+3, 170)
+        drawText(str(theTemp) + "C", 15, x + 22 - len(str(theTemp) + "C") * 5, 220)
+        drawText(weather.get_status(), 10, x + 20 - len(weather.get_status()) * 3, 210)
+        
+        x += 50
+        
+    pygame.display.update()
   except:
     # Weather trouble...
     print "Weather error:", sys.exc_info()[0]
     print "Weather error:", sys.exc_info()[1]
     drawText("Weather unavailable",20, 5, 5)
     pygame.display.update()
-    time.sleep(2)    
-  
-def renderWeatherIcon(icon, xPos, yPos):
+
+    
+def renderWeatherIcon(icon, xPos, yPos, xSize=90, ySize=90):
   # Renders a weather icon onto the display
   image_url = "http://openweathermap.org/img/w/" + icon + ".png"
   image_str = urlopen(image_url).read()
   image_file = io.BytesIO(image_str)
   image = pygame.image.load(image_file)
-  image = pygame.transform.scale(image, [90,90])
+  image = pygame.transform.scale(image, [xSize,ySize])
   lcd.blit(image, (xPos, yPos))
 
-def showWeather(numSecs, whichHeadline):
-  # showWeather - draws the weather screen and shows time for 5s.
-
-  # Draws the weather.
-  renderWeather()
-
-  # Draw the news.
-  try:
-    whichHeadline = renderNews(whichHeadline)
-  except:
-    print "Unexpected error:", sys.exc_info()[0]
-    print "Unexpected error:", sys.exc_info()[1]      
-  
-  # Show the time / date for 5s, then update everything else.
+def paintTime(numSecs = 5):
+  # Show the time / date at the bottom for 5s, then update everything else.
   for x in range(numSecs * 2):
     theTime = str(datetime.datetime.now().time())
     theDate = time.strftime("%d/%m/%Y")
@@ -152,8 +209,6 @@ def showWeather(numSecs, whichHeadline):
     drawText(theTime[0:8] + ", " + theDate,32,5,205)
     pygame.display.update()
     time.sleep(0.5)
-
-  return whichHeadline
 
 ########
 ## System stats functions
@@ -410,7 +465,7 @@ def graph():
           whatColour = green
 
         nextVal = 200 - ((nextVal - 30) * perPixel)
-        pygame.draw.line(lcd, whatColour, (currX - 2, lastY), (currX, nextVal), 2)
+        pygame.draw.line(lcd, whatColour, (currX - 2, lastY), (currX, nextVal), 3)
         currX += 2
         lastY = nextVal
 
@@ -424,6 +479,19 @@ def graph():
 ## System stats function ends.
 ########
 
+########
+## Multi-day forecast code starts
+########
+
+def multiDay():
+  # Grab forecast
+  fc = owm.daily_forecast('London,uk', limit=6)
+  # Render it
+
+########
+## Multi-day forecast code starts
+########
+
 
 
 ########
@@ -435,26 +503,39 @@ def main():
   lcd.fill(white)
   
   while True:
-    for n in range(5):
+    # Show system stats
+    lcd.fill(white)
+    for n in range(10):
       stats()
       time.sleep(0.5)
       lcd.fill(white)
-    
-    for n in range(5):
+      
+    # Show weather
+    lcd.fill(white)
+    renderWeather()
+    time.sleep(5)
+
+    # Append the CPU log file
+    updateCPUTempLog()
+
+    # Show temperature graph
+    lcd.fill(white)
+    for n in range(10):
       graph()
       time.sleep(0.5)
-      lcd.fill(white)
-
-    # Append the CPU log file
-    updateCPUTempLog()
-
-    # Show time/weather/news for 5s...
-    whichHeadline = showWeather(5, whichHeadline)
+      lcd.fill(white)    
+    
+    # Show the news...
     lcd.fill(white)
+    renderNews()
+    time.sleep(5)
 
     # Append the CPU log file
     updateCPUTempLog()
 
+main()
+
+'''
 if __name__ == '__main__':
   try:
     main()
@@ -463,3 +544,4 @@ if __name__ == '__main__':
   finally:
     pygame.quit()   # stops the PyGame engine
     sys.exit()
+'''
