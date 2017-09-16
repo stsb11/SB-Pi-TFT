@@ -1,9 +1,13 @@
 #!/usr/bin/python
 # coding=UTF-8
 
+# For the AliExpress 2.4" 240x320 SPI TFT screen I used, I used this to get the display working:
+# https://github.com/watterott/RPi-Display/blob/master/docs/FBTFT-Install.md#fbtft-framebuffer-installation
+
+##  Do a sudo pip install for feedparser, pyown and psutil
+
 ########
 ##  Import lots of libraries.
-##  Need to ensure these are pip install-ed first.
 ########
 import time
 import datetime
